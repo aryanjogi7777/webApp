@@ -38,6 +38,15 @@
                     </select>
                 </label>
                 <label class="field">
+                    <span>Account status <small>(optional)</small></span>
+                    <select name="status">
+                        <option value="">All statuses</option>
+                        @foreach (\App\Models\DefaultingAccount::STATUSES as $value => $label)
+                            <option value="{{ $value }}" @selected(request('status') === $value)>{{ $label }}</option>
+                        @endforeach
+                    </select>
+                </label>
+                <label class="field">
                     <span>File format</span>
                     <select name="format" required>
                         <option value="xlsx">Excel workbook (.xlsx)</option>
@@ -45,7 +54,7 @@
                     </select>
                 </label>
             </div>
-            <div class="export-file-note"><span aria-hidden="true">▤</span><span>Export includes account IDs, contact information, balances, category and JE progress.</span></div>
+            <div class="export-file-note"><span aria-hidden="true">▤</span><span>Export includes account IDs, contact information, balances, category, JE progress, status and payment date.</span></div>
             <button class="button button-primary" type="submit">Download export <span aria-hidden="true">↓</span></button>
         </form>
     </section>

@@ -81,6 +81,21 @@
                     <div class="input-prefix"><span>₹</span><input type="number" name="paid_amount" value="{{ old('paid_amount', $account->paid_amount) }}" min="0" step="0.01" placeholder="0.00"></div>
                     @error('paid_amount') <small class="field-error">{{ $message }}</small> @enderror
                 </label>
+                <label class="field">
+                    <span>Payment date</span>
+                    <input type="date" name="payment_date" value="{{ old('payment_date', $account->payment_date?->format('Y-m-d') ?? ($editing ? '' : now()->toDateString())) }}">
+                    <small class="field-hint">Date associated with the amount currently recorded.</small>
+                    @error('payment_date') <small class="field-error">{{ $message }}</small> @enderror
+                </label>
+                <label class="field">
+                    <span>Account status <b>*</b></span>
+                    <select name="status" required>
+                        @foreach (\App\Models\DefaultingAccount::STATUSES as $value => $label)
+                            <option value="{{ $value }}" @selected(old('status', $account->status) === $value)>{{ $label }}</option>
+                        @endforeach
+                    </select>
+                    @error('status') <small class="field-error">{{ $message }}</small> @enderror
+                </label>
                 <label class="field field-full">
                     <span>Progress of the JE</span>
                     <textarea name="progress" rows="3" maxlength="5000" placeholder="Add case status, next steps or follow-up notes...">{{ old('progress', $account->progress) }}</textarea>

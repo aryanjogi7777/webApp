@@ -86,6 +86,14 @@
                             <span>CATEGORY</span>
                             <strong>{{ $account->category ?: '—' }}</strong>
                         </div>
+                        <div class="lookup-data-item">
+                            <span>STATUS</span>
+                            <strong><span class="status-badge status-{{ $account->status }}">{{ $account->status_label }}</span></strong>
+                        </div>
+                        <div class="lookup-data-item">
+                            <span>PAYMENT DATE</span>
+                            <strong>{{ $account->payment_date?->format('d M Y') ?: '—' }}</strong>
+                        </div>
                         <div class="lookup-data-item lookup-address">
                             <span>ADDRESS</span>
                             <strong>{{ $account->address ?: 'Not available' }}</strong>

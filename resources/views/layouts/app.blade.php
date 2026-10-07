@@ -38,6 +38,9 @@
                         <a class="side-link {{ request()->routeIs('accounts.export*') ? 'active' : '' }}" href="{{ route('accounts.export') }}">
                             <span class="side-icon">⇩</span> Export data
                         </a>
+                        <a class="side-link {{ request()->routeIs('accounts.reports*') ? 'active' : '' }}" href="{{ route('accounts.reports') }}">
+                            <span class="side-icon">▧</span> PDF reports
+                        </a>
                     </nav>
                 </div>
             </div>

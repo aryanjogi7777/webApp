@@ -170,7 +170,14 @@ class DefaultingAccountController extends Controller
                 [$record['closing_balance'], $record['category']] = [$record['category'], $record['closing_balance']];
             }
 
-            $record['phone_number'] = ($record['phone_number'] ?? null) ?: $this->extractPhoneNumber($record['address'] ?? null);
+            $record['phone_number'] = $this->normalizePhoneNumber(
+                ($record['phone_number'] ?? null) ?: $this->extractPhoneNumber($record['address'] ?? null)
+            );
+            if (array_key_exists('status', $columns)) {
+                $record['status'] = isset($record['status'])
+                    ? str_replace(' ', '_', strtolower(trim((string) $record['status'])))
+                    : 'pending';
+            }
 
             if (count(array_filter($record, fn ($value) => $value !== null)) === 0) {
                 continue;
@@ -185,6 +192,9 @@ class DefaultingAccountController extends Controller
                 'old_account_id' => ['nullable', 'string', 'max:64'],
                 'name' => ['required', 'string', 'max:255'],
                 'address' => ['nullable', 'string', 'max:5000'],
+                'phone_number' => ['nullable', 'string', 'max:32'],
+                'status' => ['nullable', Rule::in(array_keys(DefaultingAccount::STATUSES))],
+                'payment_date' => ['nullable', 'date'],
                 'closing_balance' => ['required', 'numeric', 'min:0'],
                 'category' => ['nullable', Rule::in(['DS', 'NDS', 'AGRI', 'LT'])],
                 'progress' => ['nullable', 'string', 'max:5000'],
@@ -241,10 +251,10 @@ class DefaultingAccountController extends Controller
         $spreadsheet = new Spreadsheet;
         $sheet = $spreadsheet->getActiveSheet();
         $sheet->setTitle('Accounts');
-        $sheet->mergeCells('A1:J1');
+        $sheet->mergeCells('A1:L1');
         $this->writeText($sheet, 'A1', 'Defaulting Accounts');
 
-        $headers = ['S.No.', 'ACCT_ID', 'Old account ID', 'Name', 'Address', 'Phone number', 'Closing balance (LPS)', 'Category', 'Progress of the JE', 'Pay'];
+        $headers = ['S.No.', 'ACCT_ID', 'Old account ID', 'Name', 'Address', 'Phone number', 'Closing balance (LPS)', 'Category', 'Progress of the JE', 'Pay', 'Status', 'Payment date'];
         foreach ($headers as $index => $header) {
             $this->writeText($sheet, [$index + 1, 2], $header);
         }
@@ -263,6 +273,8 @@ class DefaultingAccountController extends Controller
                 $account->category,
                 $account->progress,
                 $account->paid_amount === null ? null : (float) $account->paid_amount,
+                $account->status_label,
+                $account->payment_date?->format('Y-m-d'),
             ];
 
             foreach ($values as $index => $value) {
@@ -277,18 +289,18 @@ class DefaultingAccountController extends Controller
             $row++;
         }
 
-        $sheet->getStyle('A1:J1')->applyFromArray([
+        $sheet->getStyle('A1:L1')->applyFromArray([
             'font' => ['bold' => true, 'size' => 15, 'color' => ['rgb' => 'FFFFFF']],
             'fill' => ['fillType' => 'solid', 'startColor' => ['rgb' => '142B4A']],
         ]);
-        $sheet->getStyle('A2:J2')->applyFromArray([
+        $sheet->getStyle('A2:L2')->applyFromArray([
             'font' => ['bold' => true, 'color' => ['rgb' => 'FFFFFF']],
             'fill' => ['fillType' => 'solid', 'startColor' => ['rgb' => '245A72']],
         ]);
         $sheet->freezePane('A3');
-        $sheet->setAutoFilter('A2:J2');
+        $sheet->setAutoFilter('A2:L2');
 
-        foreach (range('A', 'J') as $column) {
+        foreach (range('A', 'L') as $column) {
             $sheet->getColumnDimension($column)->setAutoSize(true);
         }
 
@@ -321,6 +333,9 @@ class DefaultingAccountController extends Controller
             'name' => trim((string) $request->input('name')),
             'category' => $request->filled('category') ? strtoupper(trim((string) $request->input('category'))) : null,
             'phone_number' => $this->normalizePhoneNumber($request->input('phone_number')),
+            'status' => $request->has('status')
+                ? (str_replace(' ', '_', strtolower(trim((string) $request->input('status')))) ?: 'pending')
+                : ($account?->status ?? 'pending'),
         ]);
 
         return $request->validate([
@@ -333,6 +348,8 @@ class DefaultingAccountController extends Controller
             'category' => ['nullable', Rule::in(['DS', 'NDS', 'AGRI', 'LT'])],
             'progress' => ['nullable', 'string', 'max:5000'],
             'paid_amount' => ['nullable', 'numeric', 'min:0'],
+            'status' => ['required', Rule::in(array_keys(DefaultingAccount::STATUSES))],
+            'payment_date' => ['nullable', 'date'],
         ]);
     }
 
@@ -349,6 +366,9 @@ class DefaultingAccountController extends Controller
             })
             ->when(in_array($request->query('category'), ['DS', 'NDS', 'AGRI', 'LT'], true), function (Builder $query) use ($request): void {
                 $query->where('category', $request->query('category'));
+            })
+            ->when(in_array($request->query('status'), array_keys(DefaultingAccount::STATUSES), true), function (Builder $query) use ($request): void {
+                $query->where('status', $request->query('status'));
             });
     }
 
@@ -369,6 +389,8 @@ class DefaultingAccountController extends Controller
             'category' => ['category', 'type'],
             'progress' => ['progress of the je', 'progress of je', 'progress', 'je progress', 'case progress'],
             'paid_amount' => ['pay', 'paid', 'paid amount', 'payment'],
+            'status' => ['status', 'account status', 'recovery status'],
+            'payment_date' => ['payment date', 'date paid', 'paid date', 'date of payment'],
         ];
         $columns = [];
 

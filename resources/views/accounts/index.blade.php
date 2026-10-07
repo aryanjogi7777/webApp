@@ -42,7 +42,7 @@
                 <h2>Account register</h2>
                 <p>Search, review and manage your account data.</p>
             </div>
-            <a href="{{ route('accounts.export', request()->only('search', 'category')) }}" class="button button-light">Export this list <span aria-hidden="true">→</span></a>
+            <a href="{{ route('accounts.export', request()->only('search', 'category', 'status')) }}" class="button button-light">Export this list <span aria-hidden="true">→</span></a>
         </div>
 
         <form action="{{ route('accounts.index') }}" method="GET" class="filter-bar">
@@ -60,8 +60,17 @@
                     <option value="LT" @selected(request('category') === 'LT')>LT</option>
                 </select>
             </label>
+            <label class="filter-select">
+                <span class="sr-only">Filter by status</span>
+                <select name="status">
+                    <option value="">All statuses</option>
+                    @foreach (\App\Models\DefaultingAccount::STATUSES as $value => $label)
+                        <option value="{{ $value }}" @selected(request('status') === $value)>{{ $label }}</option>
+                    @endforeach
+                </select>
+            </label>
             <button class="button button-dark" type="submit">Apply filters</button>
-            @if (request()->hasAny(['search', 'category']))
+            @if (request()->hasAny(['search', 'category', 'status']))
                 <a class="clear-filter" href="{{ route('accounts.index') }}">Clear</a>
             @endif
         </form>
@@ -72,11 +81,14 @@
                     <tr>
                         <th class="number-col">#</th>
                         <th>ACCOUNT</th>
+                        <th>PHONE NUMBER</th>
                         <th>ADDRESS</th>
                         <th class="amount-col">CLOSING BALANCE</th>
                         <th>CATEGORY</th>
+                        <th>STATUS</th>
                         <th>PROGRESS OF THE JE</th>
                         <th class="amount-col">PAY</th>
+                        <th>PAYMENT DATE</th>
                         <th class="amount-col">PENDING</th>
                         <th class="actions-col"><span class="sr-only">Actions</span></th>
                     </tr>
@@ -88,13 +100,11 @@
                             <td class="account-cell">
                                 <strong>{{ $account->name }}</strong>
                                 <span>{{ $account->account_id }}</span>
-                                @if ($account->phone_number)
-                                    <small>Phone · {{ $account->phone_number }}</small>
-                                @endif
                                 @if ($account->old_account_id)
                                     <small>Old ID · {{ $account->old_account_id }}</small>
                                 @endif
                             </td>
+                            <td class="phone-cell" data-label="PHONE NUMBER">{{ $account->phone_number ?: '—' }}</td>
                             <td class="address-cell" data-label="ADDRESS">{{ $account->address ?: '—' }}</td>
                             <td class="amount-cell" data-label="CLOSING BALANCE">₹{{ number_format((float) $account->closing_balance, 2) }}</td>
                             <td data-label="CATEGORY">
@@ -104,8 +114,10 @@
                                     <span class="muted-dash">—</span>
                                 @endif
                             </td>
+                            <td data-label="STATUS"><span class="status-badge status-{{ $account->status }}">{{ $account->status_label }}</span></td>
                             <td class="progress-cell" data-label="PROGRESS">{{ $account->progress ?: '—' }}</td>
                             <td class="amount-cell" data-label="PAY">{{ $account->paid_amount === null ? '—' : '₹'.number_format((float) $account->paid_amount, 2) }}</td>
+                            <td data-label="PAYMENT DATE">{{ $account->payment_date?->format('d M Y') ?: '—' }}</td>
                             <td class="amount-cell pending-cell" data-label="PENDING">₹{{ number_format($account->pending_amount, 2) }}</td>
                             <td class="actions-cell" data-label="ACTIONS">
                                 <a class="icon-button" href="{{ route('accounts.edit', $account) }}" aria-label="Edit {{ $account->name }}" title="Edit record">✎</a>
@@ -118,12 +130,12 @@
                         </tr>
                     @empty
                         <tr>
-                            <td colspan="9">
+                            <td colspan="12">
                                 <div class="empty-state">
                                     <span class="empty-icon">▤</span>
-                                    <strong>{{ request()->hasAny(['search', 'category']) ? 'No matching accounts' : 'Your register is ready' }}</strong>
-                                    <span>{{ request()->hasAny(['search', 'category']) ? 'Try changing your search or filters.' : 'Add an account or import your spreadsheet to get started.' }}</span>
-                                    @unless (request()->hasAny(['search', 'category']))
+                                    <strong>{{ request()->hasAny(['search', 'category', 'status']) ? 'No matching accounts' : 'Your register is ready' }}</strong>
+                                    <span>{{ request()->hasAny(['search', 'category', 'status']) ? 'Try changing your search or filters.' : 'Add an account or import your spreadsheet to get started.' }}</span>
+                                    @unless (request()->hasAny(['search', 'category', 'status']))
                                         <a href="{{ route('accounts.create') }}" class="button button-primary">Add your first account</a>
                                     @endunless
                                 </div>
